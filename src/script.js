@@ -7,6 +7,7 @@ import GUI from 'lil-gui'
 import overlayVertexShader from './shaders/overlay/vertex.glsl'
 import overlayFragmentShader from './shaders/overlay/fragment.glsl'
 import { gsap } from 'gsap'
+import Stats from 'stats-js'
 
 /**
  * Core objects
@@ -15,6 +16,9 @@ const canvas = document.querySelector('canvas.webgl');
 const renderer = new THREE.WebGLRenderer( { canvas });
 renderer.setClearColor('#201919')
 const scene = new THREE.Scene()
+var stats = new Stats()
+stats.showPanel(0) // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild(stats.dom)
 
 /**
  * Loader Setup
@@ -155,6 +159,7 @@ const rotateBox = (time) => {
 const clock = new THREE.Clock()
 const tick = () =>
 {
+    stats.begin()
     if (controls.enabled){
         timeTracker.elapsedTime =  timeTracker.elapsedTime + debugObject.timeSpeed * clock.getDelta();
     }
@@ -168,6 +173,7 @@ const tick = () =>
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick)
+    stats.end()
 }
 
 tick()
