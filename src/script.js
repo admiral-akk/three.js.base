@@ -14,6 +14,8 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 /**
  * Core objects
  */
+const container = document.querySelector("div.container");
+const ui = document.querySelector("div.ui");
 const canvas = document.querySelector("canvas.webgl");
 const renderer = new THREE.WebGLRenderer({ canvas });
 renderer.setClearColor("#201919");
@@ -83,7 +85,7 @@ window.addEventListener("dblclick", () => {
   if (fullscreenElement) {
     document.exitFullscreen();
   } else {
-    canvas.requestFullscreen();
+    container.requestFullscreen();
   }
 });
 
