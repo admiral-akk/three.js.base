@@ -126,7 +126,6 @@ const updateSize = () => {
   canvasContainer.style.top = sizes.verticalOffset.toString() + "px";
   canvasContainer.style.left = sizes.horizontalOffset.toString() + "px";
 
-  // Render
   renderer.setSize(sizes.width, sizes.height);
   composer.setSize(sizes.width, sizes.height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -135,9 +134,26 @@ const updateSize = () => {
 updateSize();
 
 /**
+ * Mouse tracking
+ */
+
+const mousePos = (event) => {
+  return new THREE.Vector2(
+    ((event.clientX - sizes.horizontalOffset) / sizes.width) * 2 - 1,
+    -((event.clientY - sizes.verticalOffset) / sizes.height) * 2 + 1
+  );
+};
+
+/**
  * Event Handling
  */
+const eventLog = [];
+const loggedEvents = new Set(["pointerdown", "pointerup"]);
 const universalEventHandler = (event) => {
+  if (loggedEvents.has(event.type)) {
+    eventLog.push([timeTracker.elapsedTime, event]);
+    console.log(eventLog);
+  }
   switch (event.type) {
     case "resize":
     case "orientationchange":
@@ -155,6 +171,14 @@ const universalEventHandler = (event) => {
       } else {
         container.requestFullscreen();
       }
+      break;
+    case "pointerdown":
+    case "pointerup":
+    case "pointermove":
+      if (event.target.className !== "webgl") {
+        return;
+      }
+      const pos = mousePos(event);
       break;
     default:
       break;
