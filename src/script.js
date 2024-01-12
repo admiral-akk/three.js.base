@@ -123,21 +123,42 @@ const updateSize = () => {
   composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 };
 updateSize();
-window.addEventListener("resize", updateSize);
-window.addEventListener("orientationchange", updateSize);
-window.addEventListener("dblclick", (event) => {
-  if (event.target.className !== "webgl") {
-    return;
-  }
-  const fullscreenElement =
-    document.fullscreenElement || document.webkitFullscreenElement;
 
-  if (fullscreenElement) {
-    document.exitFullscreen();
-  } else {
-    container.requestFullscreen();
+/**
+ * Event Handling
+ */
+const universalEventHandler = (event) => {
+  switch (event.type) {
+    case "resize":
+    case "orientationchange":
+      updateSize();
+      break;
+    case "dblclick":
+      if (event.target.className !== "webgl") {
+        return;
+      }
+      const fullscreenElement =
+        document.fullscreenElement || document.webkitFullscreenElement;
+
+      if (fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        container.requestFullscreen();
+      }
+      break;
+    default:
+      break;
   }
-});
+};
+
+const events = new Set();
+for (const key in canvas) {
+  if (/^on/.test(key)) {
+    const eventType = key.substring(2);
+    events.add(eventType);
+    window.addEventListener(eventType, universalEventHandler);
+  }
+}
 
 /**
  * Setup camera
