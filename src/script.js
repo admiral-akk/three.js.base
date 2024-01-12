@@ -4,12 +4,13 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import GUI from "lil-gui";
-import overlayVertexShader from "./shaders/overlay/vertex.glsl";
-import overlayFragmentShader from "./shaders/overlay/fragment.glsl";
 import { gsap } from "gsap";
 import Stats from "stats-js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import loadingVertexShader from "./shaders/loading/vertex.glsl";
+import loadingFragmentShader from "./shaders/loading/fragment.glsl";
 
 /**
  * Core objects
@@ -106,10 +107,6 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enabled = true;
 
 /**
- * Composer
- */
-
-/**
  * Debug
  */
 
@@ -120,52 +117,69 @@ gui.add(debugObject, "timeSpeed").min(0).max(3).step(0.1);
 /**
  * Loading overlay
  */
-const overlayGeometry = new THREE.PlaneGeometry(2, 2, 1, 1);
-const overlayMaterial = new THREE.ShaderMaterial({
-  transparent: true,
-  depthWrite: false,
-  blending: THREE.NormalBlending,
-  vertexShader: overlayVertexShader,
-  fragmentShader: overlayFragmentShader,
+const loadingShader = {
   uniforms: {
+    tDiffuse: { value: null },
     uMinY: { value: 0.0 },
     uWidthY: { value: 0.005 },
     uMaxX: { value: 0.0 },
   },
-});
-const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial);
-scene.add(overlay);
+  vertexShader: loadingVertexShader,
+  fragmentShader: loadingFragmentShader,
+};
+
+const loadingScreen = new ShaderPass(loadingShader);
+const loadingUniforms = loadingScreen.material.uniforms;
+composer.addPass(loadingScreen);
 
 /**
  * Loading Animation
  */
 let progressRatio = 0.0;
-let timeTracker = { enabled: false, elapsedTime: 0.0 };
-loadingManager.onProgress = (_, itemsLoaded, itemsTotal) => {
-  progressRatio = Math.max(itemsLoaded / itemsTotal, progressRatio);
-  gsap.to(overlayMaterial.uniforms.uMaxX, {
+let currAnimation = null;
+let timeTracker = { enabled: false, deltaTime: 0, elapsedTime: 0.0 };
+const updateProgress = (progress) => {
+  progressRatio = Math.max(progress, progressRatio);
+  if (currAnimation) {
+    currAnimation.kill();
+  }
+  currAnimation = gsap.to(loadingUniforms.uMaxX, {
     duration: 1,
     value: progressRatio,
   });
   if (progressRatio == 1) {
+    currAnimation.kill();
     const timeline = gsap.timeline();
-    timeline.to(overlayMaterial.uniforms.uWidthY, {
+    currAnimation = timeline.to(loadingUniforms.uMaxX, {
       duration: 0.2,
-      delay: 1.0,
+      value: progressRatio,
+    });
+    timeline.set(timeTracker, { enabled: true });
+    timeline.to(loadingUniforms.uWidthY, {
+      duration: 0.1,
+      delay: 0.0,
       value: 0.01,
       ease: "power1.inOut",
     });
-    timeline.to(overlayMaterial.uniforms.uWidthY, {
-      duration: 0.2,
+    timeline.to(loadingUniforms.uWidthY, {
+      duration: 0.1,
       value: 0.0,
       ease: "power1.in",
     });
-    timeline.set(timeTracker, { enabled: true });
-    timeline.to(overlayMaterial.uniforms.uMinY, {
-      duration: 0.6,
+    timeline.to(loadingUniforms.uMinY, {
+      duration: 0.5,
       value: 0.5,
       ease: "power1.in",
     });
+  }
+};
+
+const initLoadingAnimation = () => {
+  if (loadingManager.itemsTotal > 0) {
+    loadingManager.onProgress = (_, itemsLoaded, itemsTotal) =>
+      updateProgress(itemsLoaded / itemsTotal);
+  } else {
+    updateProgress(1);
   }
 };
 
@@ -204,4 +218,5 @@ const tick = () => {
   stats.end();
 };
 
+initLoadingAnimation();
 tick();
