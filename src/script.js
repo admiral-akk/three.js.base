@@ -152,7 +152,6 @@ const loggedEvents = new Set(["pointerdown", "pointerup"]);
 const universalEventHandler = (event) => {
   if (loggedEvents.has(event.type)) {
     eventLog.push([timeTracker.elapsedTime, event]);
-    console.log(eventLog);
   }
   switch (event.type) {
     case "resize":
