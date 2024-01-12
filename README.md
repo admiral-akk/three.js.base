@@ -4,3 +4,4 @@ Credits
 
 Font(s): https://github.com/mrdoob/three.js/tree/dev/examples/fonts
 Matcap Material(s): https://github.com/nidorx/matcaps
+Sword Swoosh(s): https://freesound.org/people/Artninja/packs/39091/
