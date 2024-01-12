@@ -25,6 +25,8 @@ const canvas = document.querySelector("canvas.webgl");
 const aspectRatio = 16 / 9;
 const camera = new THREE.PerspectiveCamera(75, aspectRatio);
 const renderer = new THREE.WebGLRenderer({ canvas });
+const listener = new THREE.AudioListener();
+camera.add(listener);
 renderer.setClearColor("#201919");
 const scene = new THREE.Scene();
 const composer = new EffectComposer(renderer);
@@ -41,6 +43,7 @@ document.body.appendChild(stats.dom);
 const loadingManager = new THREE.LoadingManager();
 const textureLoader = new THREE.TextureLoader(loadingManager);
 const dracoLoader = new DRACOLoader(loadingManager);
+const audioLoader = new THREE.AudioLoader(loadingManager);
 const gltfLoader = new GLTFLoader(loadingManager);
 const fontLoader = new FontLoader(loadingManager);
 gltfLoader.setDRACOLoader(dracoLoader);
@@ -61,6 +64,33 @@ const fonts = [];
 fontLoader.load("./fonts/helvetiker_regular.typeface.json", function (font) {
   fonts.push(font);
 });
+
+/**
+ * Audio
+ */
+const audioPool = [];
+const buffers = new Map();
+
+const loadSound = (name) => {
+  audioLoader.load(`audio/${name}.mp3`, function (buffer) {
+    buffers.set(name, buffer);
+  });
+};
+
+loadSound("swoosh01");
+
+const playSound = (name) => {
+  if (!buffers.has(name)) {
+    return;
+  }
+  const buffer = buffers.get(name);
+  let audio = audioPool.filter((a) => !a.isPlaying).pop();
+  if (!audio) {
+    audio = new THREE.Audio(listener);
+  }
+  audio.setBuffer(buffer);
+  audio.play();
+};
 
 /**
  * Window size
@@ -227,7 +257,6 @@ const tick = () => {
     timeTracker.elapsedTime =
       timeTracker.elapsedTime + debugObject.timeSpeed * clock.getDelta();
   }
-
   // update controls
   controls.update();
 
