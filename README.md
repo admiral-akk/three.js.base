@@ -2,4 +2,5 @@ This template is largely based on work from [three.js journey](https://threejs-j
 
 Credits
 
+Font(s): https://github.com/mrdoob/three.js/tree/dev/examples/fonts
 Matcap Material(s): https://github.com/nidorx/matcaps

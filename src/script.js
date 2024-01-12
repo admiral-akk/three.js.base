@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
+import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import GUI from "lil-gui";
 import { gsap } from "gsap";
 import Stats from "stats-js";
@@ -41,16 +42,25 @@ const loadingManager = new THREE.LoadingManager();
 const textureLoader = new THREE.TextureLoader(loadingManager);
 const dracoLoader = new DRACOLoader(loadingManager);
 const gltfLoader = new GLTFLoader(loadingManager);
+const fontLoader = new FontLoader(loadingManager);
 gltfLoader.setDRACOLoader(dracoLoader);
 dracoLoader.setDecoderPath("./draco/gltf/");
 
 /**
- * Load texture
+ * Textures
  */
 const texture = textureLoader.load(
   "https://source.unsplash.com/random/100x100?sig=1"
 );
 const matcapTexture = textureLoader.load("./matcap/matcap01.png");
+
+/**
+ * Fonts
+ */
+const fonts = [];
+fontLoader.load("./fonts/helvetiker_regular.typeface.json", function (font) {
+  fonts.push(font);
+});
 
 /**
  * Window size
