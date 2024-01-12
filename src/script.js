@@ -11,6 +11,8 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import loadingVertexShader from "./shaders/loading/vertex.glsl";
 import loadingFragmentShader from "./shaders/loading/fragment.glsl";
+import matcapVertexShader from "./shaders/matcap/vertex.glsl";
+import matcapFragmentShader from "./shaders/matcap/fragment.glsl";
 
 /**
  * Core objects
@@ -48,6 +50,7 @@ dracoLoader.setDecoderPath("./draco/gltf/");
 const texture = textureLoader.load(
   "https://source.unsplash.com/random/100x100?sig=1"
 );
+const matcapTexture = textureLoader.load("./matcap/matcap01.png");
 
 /**
  * Window size
@@ -187,7 +190,16 @@ const initLoadingAnimation = () => {
  *  Box
  */
 const boxG = new THREE.BoxGeometry();
-const boxM = new THREE.MeshBasicMaterial({ map: texture });
+const boxM = new THREE.ShaderMaterial({
+  vertexShader: matcapVertexShader,
+  fragmentShader: matcapFragmentShader,
+  uniforms: {
+    uMatcap: {
+      type: "sampler2D",
+      value: matcapTexture,
+    },
+  },
+});
 const boxMesh = new THREE.Mesh(boxG, boxM);
 scene.add(boxMesh);
 
