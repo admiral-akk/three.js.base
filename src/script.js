@@ -15,11 +15,17 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
  * Core objects
  */
 const container = document.querySelector("div.container");
+const canvasContainer = document.querySelector("div.relative");
 const ui = document.querySelector("div.ui");
 const canvas = document.querySelector("canvas.webgl");
+const aspectRatio = 16 / 9;
+const camera = new THREE.PerspectiveCamera(75, aspectRatio);
 const renderer = new THREE.WebGLRenderer({ canvas });
 renderer.setClearColor("#201919");
 const scene = new THREE.Scene();
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(scene, camera);
+composer.addPass(renderPass);
 var stats = new Stats();
 stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
 document.body.appendChild(stats.dom);
@@ -48,37 +54,37 @@ const texture = textureLoader.load(
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
+  verticalOffset: 0,
+  horizontalOffset: 0,
 };
-renderer.setSize(sizes.width, sizes.height);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-window.addEventListener("resize", () => {
-  sizes.width = window.innerWidth;
-  sizes.height = window.innerHeight;
-
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+const updateSize = () => {
+  if (window.innerHeight * camera.aspect > window.innerWidth) {
+    sizes.width = window.innerWidth;
+    sizes.height = window.innerWidth / camera.aspect;
+    sizes.verticalOffset = (window.innerHeight - sizes.height) / 2;
+    sizes.horizontalOffset = 0;
+  } else {
+    sizes.width = window.innerHeight * camera.aspect;
+    sizes.height = window.innerHeight;
+    sizes.verticalOffset = 0;
+    sizes.horizontalOffset = (window.innerWidth - sizes.width) / 2;
+  }
+  canvasContainer.style.top = sizes.verticalOffset.toString() + "px";
+  canvasContainer.style.left = sizes.horizontalOffset.toString() + "px";
 
   // Render
   renderer.setSize(sizes.width, sizes.height);
+  composer.setSize(sizes.width, sizes.height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-});
-
-if (window.screen && window.screen.orientation) {
-  window.screen.orientation.onchange = () => {
-    sizes.width = window.innerWidth;
-    sizes.height = window.innerHeight;
-
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-
-    // Render
-    renderer.setSize(sizes.width, sizes.height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  };
-}
-
-window.addEventListener("dblclick", () => {
+  composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+};
+updateSize();
+window.addEventListener("resize", updateSize);
+window.addEventListener("orientationchange", updateSize);
+window.addEventListener("dblclick", (event) => {
+  if (event.target.className !== "webgl") {
+    return;
+  }
   const fullscreenElement =
     document.fullscreenElement || document.webkitFullscreenElement;
 
@@ -92,7 +98,6 @@ window.addEventListener("dblclick", () => {
 /**
  * Setup camera
  */
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height);
 camera.position.x = 1;
 camera.position.y = 1;
 camera.position.z = 1;
@@ -103,9 +108,6 @@ controls.enabled = true;
 /**
  * Composer
  */
-const composer = new EffectComposer(renderer);
-const renderPass = new RenderPass(scene, camera);
-composer.addPass(renderPass);
 
 /**
  * Debug
