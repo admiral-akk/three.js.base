@@ -52,18 +52,30 @@ dracoLoader.setDecoderPath("./draco/gltf/");
 /**
  * Textures
  */
-const texture = textureLoader.load(
-  "https://source.unsplash.com/random/100x100?sig=1"
-);
-const matcapTexture = textureLoader.load("./matcap/matcap01.png");
+const textures = new Map();
+
+const loadTextureFromUrl = (url) => {
+  const texture = textureLoader.load(url);
+  textures.set(url, texture);
+  return texture;
+};
+
+const loadTexture = (name) => {
+  const texture = textureLoader.load(`./texture/${name}.png`);
+  textures.set(name, texture);
+  return texture;
+};
 
 /**
  * Fonts
  */
-const fonts = [];
-fontLoader.load("./fonts/helvetiker_regular.typeface.json", function (font) {
-  fonts.push(font);
-});
+const fonts = new Map();
+
+const loadFont = (name) => {
+  fontLoader.load(`./fonts/${name}.json`, function (font) {
+    fonts.set(name, font);
+  });
+};
 
 /**
  * Audio
@@ -72,12 +84,10 @@ const audioPool = [];
 const buffers = new Map();
 
 const loadSound = (name) => {
-  audioLoader.load(`audio/${name}.mp3`, function (buffer) {
+  audioLoader.load(`./audio/${name}.mp3`, function (buffer) {
     buffers.set(name, buffer);
   });
 };
-
-loadSound("swoosh01");
 
 const playSound = (name) => {
   if (!buffers.has(name)) {
@@ -248,6 +258,14 @@ const initLoadingAnimation = () => {
 };
 
 /**
+ * Loaded Objects
+ */
+loadTexture("matcap01");
+loadTextureFromUrl("https://source.unsplash.com/random/100x100?sig=1");
+loadSound("swoosh01");
+loadFont("helvetiker_regular.typeface");
+
+/**
  *  Box
  */
 const boxG = new THREE.BoxGeometry();
@@ -257,7 +275,7 @@ const boxM = new THREE.ShaderMaterial({
   uniforms: {
     uMatcap: {
       type: "sampler2D",
-      value: matcapTexture,
+      value: textures.get("matcap01"),
     },
   },
 });
