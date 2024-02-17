@@ -16,6 +16,11 @@ import matcapVertexShader from "./shaders/matcap/vertex.glsl";
 import matcapFragmentShader from "./shaders/matcap/fragment.glsl";
 
 /**
+ * Helpers
+ */
+Math.clamp = (num, min, max) => Math.max(min, Math.min(num, max));
+
+/**
  * Core objects
  */
 const container = document.querySelector("div.container");
@@ -40,7 +45,10 @@ document.body.appendChild(stats.dom);
  * Loader Setup
  */
 
+THREE.Cache.enabled = true;
 const loadingManager = new THREE.LoadingManager();
+loadingManager.hasFiles = false;
+loadingManager.onStart = () => (loadingManager.hasFiles = true);
 const textureLoader = new THREE.TextureLoader(loadingManager);
 const dracoLoader = new DRACOLoader(loadingManager);
 const audioLoader = new THREE.AudioLoader(loadingManager);
@@ -100,6 +108,49 @@ const playSound = (name) => {
   }
   audio.setBuffer(buffer);
   audio.play();
+};
+
+/**
+ * Models
+ */
+
+const baseColorTexture = loadTexture("baseColor");
+baseColorTexture.flipY = false;
+const models = new Map();
+
+const loadModel = (name, material) => {
+  gltfLoader.load(`./models/${name}.glb`, (data) => {
+    const model = data.scene;
+    model.traverse(function (child) {
+      if (child instanceof THREE.Mesh) {
+        child.material = material;
+      }
+    });
+    model.animations = data.animations;
+    models.set(name, model);
+  });
+};
+
+const getModel = (name) => {
+  if (!models.has(name)) {
+    return null;
+  }
+  const rawModel = models.get(name);
+
+  const model = SkeletonUtils.clone(rawModel);
+  scene.add(model);
+
+  if (rawModel.animations) {
+    model.mixer = new THREE.AnimationMixer(model);
+    model.mixer.clips = rawModel.animations;
+    model.mixer.playAnimation = (name, loopMode = THREE.LoopOnce) => {
+      model.mixer.stopAllAction();
+      const action = model.mixer.clipAction(name);
+      action.setLoop(loopMode);
+      action.play();
+    };
+  }
+  return model;
 };
 
 /**
@@ -272,10 +323,10 @@ const updateProgress = (progress) => {
 };
 
 const initLoadingAnimation = () => {
-  if (loadingManager.itemsTotal > 0) {
-    loadingManager.onProgress = (_, itemsLoaded, itemsTotal) =>
-      updateProgress(itemsLoaded / itemsTotal);
-  } else {
+  loadingManager.onProgress = (_, itemsLoaded, itemsTotal) => {
+    updateProgress(itemsLoaded / itemsTotal);
+  };
+  if (!loadingManager.hasFiles) {
     updateProgress(1);
   }
 };
