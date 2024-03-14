@@ -14,7 +14,6 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import newData from "./data.json";
-import gameData from "./gameData.json";
 import { uniform } from "three/examples/jsm/nodes/core/UniformNode";
 /**
  * There are going to be a few components here.
@@ -209,19 +208,21 @@ class ModelManager {
 const perspectiveConfig = {
   type: "perspective",
   fov: 75,
-  zoom: 5,
+  zoom: 2,
 };
 
 const orthographicConfig = {
   type: "orthographic",
-  zoom: 10,
+  zoom: 2,
 };
 
 const cameraConfig = {
   subtypeConfig: perspectiveConfig,
   aspectRatio: 16 / 9,
   near: 0.001,
-  position: new THREE.Vector3(5, 7, 5),
+  position: new THREE.Vector3(5, 7, 5)
+    .normalize()
+    .multiplyScalar(perspectiveConfig.zoom),
 };
 
 const generateCamera = ({ aspectRatio, subtypeConfig, near, position }) => {
@@ -700,13 +701,16 @@ const loadData = (data, manager) => {
 };
 
 class DebugManager {
-  constructor() {
+  constructor(engine) {
     const gui = new GUI();
 
     const debugObject = {
       timeSpeed: 1.0,
     };
 
+    gui.add(engine, "importData").name("Load Data");
+
+    gui.add(engine, "exportData").name("Save Data");
     gui.add(debugObject, "timeSpeed").min(0).max(3).step(0.1);
     this.gui = gui;
   }
@@ -855,7 +859,7 @@ export class KubEngine {
     this.renderManager = renderManager;
     this.inputManager = inputManager;
 
-    const debugManager = new DebugManager();
+    const debugManager = new DebugManager(this);
     this.debugManager = debugManager;
 
     this.importData();
