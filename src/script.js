@@ -1,25 +1,12 @@
 import "./style.css";
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
-import { FontLoader } from "three/addons/loaders/FontLoader.js";
-import GUI from "lil-gui";
 import { gsap } from "gsap";
-import Stats from "stats-js";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import loadingVertexShader from "./shaders/loading/vertex.glsl";
 import loadingFragmentShader from "./shaders/loading/fragment.glsl";
 import basicTextureVertexShader from "./shaders/basicTexture/vertex.glsl";
 import basicTextureFragmentShader from "./shaders/basicTexture/fragment.glsl";
 import * as ENGINE from "./engine.js";
-
-/**
- * Helpers
- */
-Math.clamp = (num, min, max) => Math.max(min, Math.min(num, max));
 
 /**
  * Core objects
