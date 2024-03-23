@@ -411,7 +411,7 @@ class InputManager {
 
   constructor() {
     this.mouseState = {
-      posDelta: null,
+      posDelta: new THREE.Vector2(),
       pos: null,
       buttons: null,
       mouseWheel: {
@@ -423,22 +423,33 @@ class InputManager {
     };
     this.sizes = { width: 1, height: 1 };
     this.listeners = [];
-
+    window.addEventListener("blur", (event) => {
+      const { pressedKeys } = this.keyState;
+      pressedKeys.clear();
+      this.mouseState.buttons = null;
+    });
+    window.addEventListener("focusout", (event) => {
+      const { pressedKeys } = this.keyState;
+      pressedKeys.clear();
+      this.mouseState.buttons = null;
+    });
     window.addEventListener("keydown", (event) => {
-      if (event.key === "F12") {
+      const key = event.key.toLowerCase();
+      if (key === "f12") {
         return;
       }
       event.preventDefault();
       const { pressedKeys } = this.keyState;
-      if (!pressedKeys.has(event.key)) {
-        pressedKeys.set(event.key, { heldGameTime: 0, heldUserTime: 0 });
+      if (!pressedKeys.has(key)) {
+        pressedKeys.set(key, { heldGameTime: 0, heldUserTime: 0 });
       }
     });
     window.addEventListener("keyup", (event) => {
+      const key = event.key.toLowerCase();
       event.preventDefault();
       const { pressedKeys } = this.keyState;
-      if (pressedKeys.has(event.key)) {
-        pressedKeys.delete(event.key);
+      if (pressedKeys.has(key)) {
+        pressedKeys.delete(key);
       }
     });
 
@@ -485,8 +496,9 @@ class InputManager {
   updateSize(sizes) {
     this.sizes = sizes;
   }
-
   endLoop() {
+    this.mouseState.posDelta.x = 0;
+    this.mouseState.posDelta.y = 0;
     this.mouseState.mouseWheel.deltaY = null;
   }
 }
