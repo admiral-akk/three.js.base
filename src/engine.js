@@ -7,7 +7,6 @@
 import GUI from "lil-gui";
 import * as THREE from "three";
 import Stats from "stats-js";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
@@ -347,8 +346,6 @@ class RenderManager {
     const camera = generateCamera(cameraConfig);
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enabled = true;
     renderer.setClearColor("#201919");
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -414,6 +411,7 @@ class InputManager {
 
   constructor() {
     this.mouseState = {
+      posDelta: null,
       pos: null,
       buttons: null,
       mouseWheel: {
@@ -449,10 +447,18 @@ class InputManager {
       if (event.target.className !== "webgl") {
         return;
       }
+      const previous = this.mouseState.pos;
       this.mouseState.pos = new THREE.Vector2(
         ((event.clientX - sizes.horizontalOffset) / sizes.width) * 2 - 1,
         -((event.clientY - sizes.verticalOffset) / sizes.height) * 2 + 1
       );
+
+      if (previous) {
+        this.mouseState.posDelta = new THREE.Vector2(
+          this.mouseState.pos.x - previous.x,
+          this.mouseState.pos.y - previous.y
+        );
+      }
 
       this.mouseState.buttons = event.buttons;
     };

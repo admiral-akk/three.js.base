@@ -3,6 +3,7 @@ import * as THREE from "three";
 import basicTextureVertexShader from "./shaders/basicTexture/vertex.glsl";
 import basicTextureFragmentShader from "./shaders/basicTexture/fragment.glsl";
 import * as ENGINE from "./engine.js";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 /**
  * Core objects
@@ -41,6 +42,11 @@ class World {
 
     engine.scene.add(plane);
 
+    const controls = new OrbitControls(
+      engine.renderManager.camera,
+      engine.renderManager.renderer.domElement
+    );
+    controls.enabled = true;
     const textureShader = engine.renderManager.materialManager.addMaterial(
       "texture",
       basicTextureVertexShader,
