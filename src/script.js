@@ -10,92 +10,84 @@ import * as ENGINE from "./engine.js";
 
 const engine = new ENGINE.KubEngine();
 
-class FirstPersonCamera {
-  constructor(camera, input, time, scene) {
-    this.camera = camera;
-    this.input = input;
-    this.time = time;
-    this.scene = scene;
+class RealTimeStrategyCamera {
+  constructor(engine) {
+    this.camera = engine.renderManager.camera;
+    this.input = engine.inputManager;
 
-    this.rotation = new THREE.Quaternion();
-    this.translation = new THREE.Vector3(0, 1, 0);
+    this.cameraParams = {
+      distance: 5,
+      phi: Math.PI / 4,
+      theta: Math.PI / 4,
+    };
 
-    this.theta = 0;
-    this.phi = 0;
-
-    this.headbob = { time: 0, frequency: 5, height: 0.05 };
+    this.target = new THREE.Vector3();
+    this.position = new THREE.Vector3();
   }
 
-  updateRotation() {
-    const delta = this.input.mouseState.posDelta;
-    if (delta) {
-      this.phi += -4 * delta.x;
-      this.theta = Math.clamp(
-        this.theta + 4 * delta.y,
-        -Math.PI / 3,
-        Math.PI / 3
-      );
-    }
-
+  updateTarget() {
+    const { phi } = this.cameraParams;
     const qx = new THREE.Quaternion();
-    qx.setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.phi);
-    const qz = new THREE.Quaternion();
-    qz.setFromAxisAngle(new THREE.Vector3(1, 0, 0), this.theta);
-
-    const q = new THREE.Quaternion();
-    q.multiply(qx);
-    q.multiply(qz);
-
-    this.rotation.copy(q);
-  }
-
-  updateTranslation() {
-    const qx = new THREE.Quaternion();
-    qx.setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.phi);
-    const qz = new THREE.Quaternion();
-    qz.setFromAxisAngle(new THREE.Vector3(1, 0, 0), this.theta);
+    qx.setFromAxisAngle(new THREE.Vector3(0, 1, 0), phi);
     const { pressedKeys } = this.input.keyState;
     const forwardVelocity =
       (pressedKeys.has("w") ? 1 : 0) - (pressedKeys.has("s") ? 1 : 0);
-    const forward = new THREE.Vector3(0, 0, -1);
-    forward.applyQuaternion(qx).multiplyScalar(forwardVelocity / 10);
+    const forward = new THREE.Vector3(0, 0, -1)
+      .applyQuaternion(qx)
+      .multiplyScalar(forwardVelocity);
 
     const strafeVelocity =
       (pressedKeys.has("a") ? 1 : 0) - (pressedKeys.has("d") ? 1 : 0);
-    const left = new THREE.Vector3(-1, 0, 0);
+    const left = new THREE.Vector3(-1, 0, 0)
+      .applyQuaternion(qx)
+      .multiplyScalar(strafeVelocity);
 
-    if (strafeVelocity != 0 || forwardVelocity != 0) {
-      this.headbob.time += this.time.time.gameDeltaTime;
+    if (forwardVelocity || strafeVelocity) {
+      left.add(forward).normalize();
+      this.target.add(left.multiplyScalar(this.cameraParams.distance / 40));
     }
-
-    left.applyQuaternion(qx).multiplyScalar(strafeVelocity / 10);
-    this.translation.add(forward);
-    this.translation.add(left);
   }
 
-  updateHeadbob() {
-    this.camera.position.y +=
-      this.headbob.height *
-      Math.sin(this.headbob.frequency * 2 * Math.PI * this.headbob.time);
+  updatePosition() {
+    const delta = new THREE.Vector3();
+    delta.subVectors(this.target, this.position).multiplyScalar(0.1);
+    this.position.add(delta);
+  }
 
-    const forward = new THREE.Vector3(0, 0, -1);
-    forward.applyQuaternion(this.rotation);
-
-    const raycaster = new THREE.Raycaster(this.translation, forward, 0, 100);
-
-    const intersects = raycaster.intersectObjects(this.scene.children);
-    if (intersects.length) {
-      this.camera.lookAt(intersects[0].point);
+  updateCameraParams() {
+    const { deltaY } = this.input.mouseState.mouseWheel;
+    if (deltaY) {
+      this.cameraParams.distance = Math.clamp(
+        this.cameraParams.distance + deltaY / 100,
+        3,
+        20
+      );
+      this.cameraParams.theta =
+        (Math.PI * (this.cameraParams.distance + 20)) / 160;
     }
+  }
+
+  updateCamera() {
+    const { distance, phi, theta } = this.cameraParams;
+    const horizontalOffset = new THREE.Vector3(
+      Math.sin(phi),
+      0,
+      Math.cos(phi)
+    ).multiplyScalar(Math.cos(theta));
+    const offset = new THREE.Vector3(0, Math.sin(theta), 0)
+      .add(horizontalOffset)
+      .multiplyScalar(distance)
+      .add(this.position);
+
+    this.camera.position.copy(offset);
+    this.camera.lookAt(this.position);
   }
 
   update() {
-    this.updateRotation();
-
-    this.camera.quaternion.copy(this.rotation);
-    this.updateTranslation();
-    this.camera.position.copy(this.translation);
-    this.updateHeadbob();
+    this.updateTarget();
+    this.updatePosition();
+    this.updateCameraParams();
+    this.updateCamera();
   }
 }
 
@@ -117,12 +109,7 @@ class World {
     light.shadow.camera.bottom = -100.0;
     engine.scene.add(light);
 
-    this.cameraController = new FirstPersonCamera(
-      engine.renderManager.camera,
-      engine.inputManager,
-      engine.timeManager,
-      engine.scene
-    );
+    this.cameraController = new RealTimeStrategyCamera(engine);
 
     const ambientLight = new THREE.AmbientLight(0x404040);
     engine.scene.add(ambientLight);
