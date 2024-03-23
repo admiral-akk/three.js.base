@@ -31,7 +31,7 @@ class FirstPersonCamera {
     if (delta) {
       this.phi += -4 * delta.x;
       this.theta = Math.clamp(
-        this.theta - 4 * delta.y,
+        this.theta + 4 * delta.y,
         -Math.PI / 3,
         Math.PI / 3
       );
