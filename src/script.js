@@ -14,6 +14,33 @@ class World {
   constructor(engine) {
     this.engine = engine;
 
+    const light = new THREE.DirectionalLight(0xffffff, 2);
+    light.position.set(100, 100, 100);
+    light.target.position.set(0, 0, 0);
+    light.castShadow = true;
+    light.shadow.mapSize.width = 2048;
+    light.shadow.mapSize.height = 2048;
+    light.shadow.camera.near = 1.0;
+    light.shadow.camera.far = 200.0;
+    light.shadow.camera.left = -100.0;
+    light.shadow.camera.right = 100.0;
+    light.shadow.camera.top = 100.0;
+    light.shadow.camera.bottom = -100.0;
+    engine.scene.add(light);
+
+    const ambientLight = new THREE.AmbientLight(0x404040);
+    engine.scene.add(ambientLight);
+
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(40, 40),
+      new THREE.MeshStandardMaterial({ color: 0xffffff })
+    );
+    plane.castShadow = true;
+    plane.receiveShadow = true;
+    plane.rotation.x = -Math.PI / 2;
+
+    engine.scene.add(plane);
+
     const textureShader = engine.renderManager.materialManager.addMaterial(
       "texture",
       basicTextureVertexShader,
@@ -23,31 +50,17 @@ class World {
       }
     );
 
-    const light = new THREE.DirectionalLight(0xffffff);
-    light.position.set(10, 10, 10);
-    light.target.position.set(0, 0, 0);
-    light.castShadow = true;
-    light.shadow.bias = -0.01;
-    light.shadow.mapSize.width = 2 << 11;
-    light.shadow.mapSize.height = 2 << 11;
-    light.shadow.camera.near = 1.0;
-    light.shadow.camera.far = 500.0;
-    light.shadow.camera.left = 200.0;
-    light.shadow.camera.right = -200.0;
-    light.shadow.camera.top = 200.0;
-    light.shadow.camera.bottom = -200.0;
-    engine.scene.add(light);
-
-    const ambientLight = new THREE.AmbientLight(0x404040);
-    engine.scene.add(ambientLight);
-
-    const boxG = new THREE.BoxGeometry(1, 1);
-    const boxMesh = new THREE.Mesh(boxG, textureShader);
-    engine.scene.add(boxMesh);
-    boxMesh.castShadow = true;
-    boxMesh.receiveShadow = true;
-    boxMesh.material.shading = THREE.SmoothShading;
-    this.box = boxMesh;
+    for (let i = 0; i < 40; i++) {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1), textureShader);
+      box.position.x = Math.randomRange(-10, 10);
+      box.position.y = Math.randomRange(1, 3);
+      box.position.z = Math.randomRange(-10, 10);
+      engine.scene.add(box);
+      box.castShadow = true;
+      box.receiveShadow = true;
+      box.material.shading = THREE.SmoothShading;
+      this.box = box;
+    }
   }
 
   update() {

@@ -233,19 +233,19 @@ class ModelManager {
 const perspectiveConfig = {
   type: "perspective",
   fov: 75,
-  zoom: 2,
+  zoom: 6,
 };
 
 const orthographicConfig = {
   type: "orthographic",
-  zoom: 2,
+  zoom: 6,
 };
 
 const cameraConfig = {
   subtypeConfig: perspectiveConfig,
   aspectRatio: 16 / 9,
   near: 0.001,
-  position: new THREE.Vector3(5, 7, 5)
+  position: new THREE.Vector3(-5, 7, 5)
     .normalize()
     .multiplyScalar(perspectiveConfig.zoom),
 };
