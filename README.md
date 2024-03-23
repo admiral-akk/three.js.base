@@ -9,6 +9,8 @@ Credits
 - Perlin Noise Generator: http://kitfox.com/projects/perlinNoiseMaker/
 - Perlin Noise Fields: https://sighack.com/post/getting-creative-with-perlin-noise-fields
 - UV Subgrid: https://blenderartists.org/t/solved-a-way-to-see-the-scale-of-an-uv-mapping/1313252
+- Skybox texture: https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky
+- Panoramic Texture to Cube Map: https://jaxry.github.io/panorama-to-cubemap/
 
 Learning Resources
 

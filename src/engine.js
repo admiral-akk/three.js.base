@@ -16,6 +16,7 @@ import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import loadingVertexShader from "./shaders/loading/vertex.glsl";
 import loadingFragmentShader from "./shaders/loading/fragment.glsl";
 import { gsap } from "gsap";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import newData from "./data.json";
 
@@ -112,14 +113,34 @@ class FontManager {
   }
 }
 
+class CubeTextureManager {
+  constructor(loadingManager) {
+    this.cubeTextureLoader = new THREE.CubeTextureLoader(loadingManager);
+    this.load = (path) => {
+      return this.cubeTextureLoader.load(
+        ["/px.png", "/nx.png", "/py.png", "/ny.png", "/pz.png", `/nz.png`].map(
+          (n) => path + n
+        )
+      );
+    };
+    this.sky = this.load("./texture/cube/sky");
+  }
+}
+
 class TextureManager {
   static defaultTexturePath = "./texture/uvSubgrid.png";
 
   constructor(loadingManager) {
     this.textureLoader = new THREE.TextureLoader(loadingManager);
-
+    this.RGBELoader = new RGBELoader(loadingManager);
     this.load = (path, config = {}) => {
-      const texture = this.textureLoader.load(path);
+      let texture;
+      const regex = /\.hdr/g;
+      if (path.match(regex)) {
+        texture = this.RGBELoader.load(path);
+      } else {
+        texture = this.textureLoader.load(path);
+      }
       for (const param in config) {
         texture[`${param}`] = config.param;
       }
@@ -898,6 +919,8 @@ export class KubEngine {
     const loadingManager = new THREE.LoadingManager();
     loadingManager.hasFiles = false;
     loadingManager.onStart = () => (loadingManager.hasFiles = true);
+    const cubeTextureManager = new CubeTextureManager(loadingManager);
+    this.cubeTextureManager = cubeTextureManager;
     const textureManager = new TextureManager(loadingManager);
     const fontManager = new FontManager(loadingManager);
     const audioManager = new AudioManager(loadingManager);
@@ -955,6 +978,7 @@ export class KubEngine {
 
   startGame() {
     this.loadingAnimationManager.initLoadingAnimation();
+    this.scene.background = this.cubeTextureManager.sky;
     this.raf();
   }
 
