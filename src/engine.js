@@ -944,8 +944,18 @@ export class KubEngine {
     DebugManager.updateGui(this, this.debugManager.gui, "engine");
   }
 
+  raf() {
+    this.statsManager.stats.begin();
+    this.update();
+    this.composer.render();
+    this.endLoop();
+    this.statsManager.stats.end();
+    window.requestAnimationFrame(() => this.raf());
+  }
+
   startGame() {
     this.loadingAnimationManager.initLoadingAnimation();
+    this.raf();
   }
 
   update() {
