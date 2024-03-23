@@ -13,8 +13,12 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
+import loadingVertexShader from "./shaders/loading/vertex.glsl";
+import loadingFragmentShader from "./shaders/loading/fragment.glsl";
+import { gsap } from "gsap";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import newData from "./data.json";
-import { uniform } from "three/examples/jsm/nodes/core/UniformNode";
+
 /**
  * There are going to be a few components here.
  *
@@ -793,6 +797,79 @@ class DebugManager {
   }
 }
 
+class LoadingAnimationManager {
+  constructor(engine) {
+    /**
+     * Loading overlay
+     */
+    const loadingShader = {
+      uniforms: {
+        tDiffuse: { value: null },
+        uMinY: { value: 0.0 },
+        uWidthY: { value: 0.005 },
+        uMaxX: { value: 0.0 },
+      },
+      vertexShader: loadingVertexShader,
+      fragmentShader: loadingFragmentShader,
+    };
+
+    const loadingScreen = new ShaderPass(loadingShader);
+    const loadingUniforms = loadingScreen.material.uniforms;
+    engine.composer.addPass(loadingScreen);
+
+    /**
+     * Loading Animation
+     */
+    let progressRatio = 0.0;
+    let currAnimation = null;
+    let timeTracker = { enabled: false, deltaTime: 0, elapsedTime: 0.0 };
+    const updateProgress = (progress) => {
+      progressRatio = Math.max(progress, progressRatio);
+      if (currAnimation) {
+        currAnimation.kill();
+      }
+      currAnimation = gsap.to(loadingUniforms.uMaxX, {
+        duration: 1,
+        value: progressRatio,
+      });
+      if (progressRatio == 1) {
+        currAnimation.kill();
+        const timeline = gsap.timeline();
+        currAnimation = timeline.to(loadingUniforms.uMaxX, {
+          duration: 0.2,
+          value: progressRatio,
+        });
+        timeline.set(timeTracker, { enabled: true });
+        timeline.to(loadingUniforms.uWidthY, {
+          duration: 0.1,
+          delay: 0.0,
+          value: 0.01,
+          ease: "power1.inOut",
+        });
+        timeline.to(loadingUniforms.uWidthY, {
+          duration: 0.1,
+          value: 0.0,
+          ease: "power1.in",
+        });
+        timeline.to(loadingUniforms.uMinY, {
+          duration: 0.5,
+          value: 0.5,
+          ease: "power1.in",
+        });
+      }
+    };
+
+    this.initLoadingAnimation = () => {
+      engine.loadingManager.onProgress = (_, itemsLoaded, itemsTotal) => {
+        updateProgress(itemsLoaded / itemsTotal);
+      };
+      if (!engine.loadingManager.hasFiles) {
+        updateProgress(1);
+      }
+    };
+  }
+}
+
 export class KubEngine {
   importData() {
     this.syncFromData(newData);
@@ -858,6 +935,7 @@ export class KubEngine {
     this.sizes = windowManager.sizes;
     this.renderManager = renderManager;
     this.inputManager = inputManager;
+    this.loadingAnimationManager = new LoadingAnimationManager(this);
 
     const debugManager = new DebugManager(this);
     this.debugManager = debugManager;
@@ -866,8 +944,23 @@ export class KubEngine {
     DebugManager.updateGui(this, this.debugManager.gui, "engine");
   }
 
+  startGame() {
+    this.loadingAnimationManager.initLoadingAnimation();
+  }
+
   update() {
     this.renderManager.handleMouse(this.inputManager.mouseState);
+
+    for (const materialName in this.renderManager.materialManager.materials) {
+      const material =
+        this.renderManager.materialManager.materials[materialName];
+      if (material.uniforms && material.uniforms.eTime) {
+        material.uniforms.eTime.value = engine.timeManager.time.gameTime;
+      }
+    }
+    if (this.world) {
+      this.world.update();
+    }
   }
 
   endLoop() {

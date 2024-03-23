@@ -1,9 +1,9 @@
 {
   "renderManager": {
     "materialManager": {
-      "texture_pTexture": {
-        "uniformType": "sampler2D",
-        "value": "./texture/uvSubgrid.png"
+      "colorShader_pBaseColor": {
+        "uniformType": "color",
+        "value": { "r": 1, "g": 0.14126329113044458, "b": 0.45641102317066595 }
       }
     }
   }
