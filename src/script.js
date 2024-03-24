@@ -206,7 +206,7 @@ class Enemy {
     this.position = position;
     this.target = position.clone();
     this.engine = engine;
-    this.health = 2;
+    this.health = 4;
     this.time = engine.timeManager;
     const textureShader = engine.renderManager.materialManager.addMaterial(
       "texture",
@@ -233,11 +233,51 @@ class Enemy {
   update() {}
 }
 
+class Projectile {
+  constructor(engine, start, target) {
+    this.bullet = new THREE.Mesh(
+      new THREE.SphereGeometry(0.4),
+      new THREE.MeshBasicMaterial({ color: "red" })
+    );
+    console.log("spawn");
+    engine.scene.add(this.bullet);
+    this.engine = engine;
+    this.time = engine.timeManager;
+    this.bullet.position.copy(start);
+    this.target = target;
+    this.speed = 20;
+  }
+
+  checkDead() {
+    if (
+      this.target.box.parent &&
+      this.bullet.position.distanceTo(this.target.box.position) > 1
+    ) {
+      return;
+    }
+    this.engine.scene.remove(this.bullet);
+  }
+
+  updatePosition() {
+    const delta = new THREE.Vector3();
+    delta.copy(this.target.box.position).sub(this.bullet.position).normalize();
+    delta.multiplyScalar(this.time.time.gameDeltaTime * this.speed);
+    this.bullet.position.add(delta);
+  }
+
+  update() {
+    console.log("projectile update");
+    this.checkDead();
+    this.updatePosition();
+  }
+}
+
 class Unit {
   constructor(engine, enemies) {
     this.position = new THREE.Vector3(0, 1, 0);
     this.target = new THREE.Vector3(0, 1, 0);
     this.engine = engine;
+    this.projectiles = [];
     this.enemies = enemies;
     this.time = engine.timeManager;
     const textureShader = engine.renderManager.materialManager.addMaterial(
@@ -256,7 +296,7 @@ class Unit {
     box.isUnit = true;
     box.controller = this;
     this.attackData = {
-      range: 4,
+      range: 6,
       period: 1,
       lastAttackTime: null,
     };
@@ -385,14 +425,18 @@ class Unit {
     if (lastAttackTime === null || gameTime - lastAttackTime >= period) {
       this.attackData.lastAttackTime = gameTime;
       target.damage(1);
-      console.log("Attack!");
+      this.projectiles.push(new Projectile(this.engine, this.position, target));
     }
+  }
+  updateProjectiles() {
+    this.projectiles.forEach((p) => p.update());
   }
 
   update() {
     this.updatePosition();
     this.updateBox();
     this.updateTargetCircle();
+    this.updateProjectiles();
     this.tryAttack();
   }
 }
