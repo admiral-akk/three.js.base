@@ -116,11 +116,26 @@ class SelectUnits {
     };
 
     this.selectPass = new ShaderPass(unitSelectionShader);
+    this.selectedUnits = [];
   }
 
   update() {
     const { mouseState } = this.input;
     const { buttons, pos } = mouseState;
+    if (buttons === 2) {
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(pos, this.camera);
+      raycaster.layers.set(1);
+
+      const intersects = raycaster.intersectObjects(this.scene.children);
+
+      if (intersects.length) {
+        this.selectedUnits.forEach((u) => {
+          u.controller.target.copy(intersects[0].point);
+          u.controller.target.y = 1;
+        });
+      }
+    }
     if (buttons === 1) {
       if (!this.startClick) {
         this.startClick = new THREE.Vector2();
@@ -162,7 +177,7 @@ class SelectUnits {
           new THREE.Vector3(0, 1, Math.tan(verticalAngle * highY)),
         ].map((v) => v.applyQuaternion(this.camera.quaternion));
 
-        const hits = [];
+        this.selectedUnits = [];
 
         this.scene.traverse((obj) => {
           if (!obj.isUnit) {
@@ -174,11 +189,9 @@ class SelectUnits {
             (norm) => norm.dot(delta) > 0
           ).length;
           if (matches === 0) {
-            hits.push(obj);
+            this.selectedUnits.push(obj);
           }
         });
-
-        console.log(hits);
       }
       this.startClick = null;
       this.engine.composer.removePass(this.selectPass);
@@ -188,7 +201,10 @@ class SelectUnits {
 
 class Unit {
   constructor(engine) {
+    this.position = new THREE.Vector3(0, 1, 0);
+    this.target = new THREE.Vector3(0, 1, 0);
     this.engine = engine;
+    this.time = engine.timeManager;
     const textureShader = engine.renderManager.materialManager.addMaterial(
       "texture",
       basicTextureVertexShader,
@@ -203,13 +219,34 @@ class Unit {
     box.receiveShadow = true;
     box.material.shading = THREE.SmoothShading;
     box.isUnit = true;
+    box.controller = this;
     this.box = box;
+    this.speed = 2;
   }
 
-  update() {
+  updatePosition() {
+    const offset = new THREE.Vector3();
+    offset.copy(this.target).sub(this.position);
+    const maxDist = this.time.time.gameDeltaTime * this.speed;
+    if (offset.length() < maxDist) {
+      this.position.copy(this.target);
+    } else {
+      offset.normalize();
+      offset.multiplyScalar(maxDist);
+      this.position.add(offset);
+    }
+  }
+
+  updateBox() {
+    this.box.position.copy(this.position);
     this.box.setRotationFromEuler(
       new THREE.Euler(0, this.engine.timeManager.time.gameTime, 0)
     );
+  }
+
+  update() {
+    this.updatePosition();
+    this.updateBox();
   }
 }
 
@@ -243,6 +280,7 @@ class World {
     plane.castShadow = true;
     plane.receiveShadow = true;
     plane.rotation.x = -Math.PI / 2;
+    plane.layers.enable(1);
 
     engine.scene.add(plane);
 
