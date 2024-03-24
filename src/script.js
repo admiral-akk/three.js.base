@@ -202,10 +202,11 @@ class SelectUnits {
 }
 
 class Enemy {
-  constructor(engine) {
-    this.position = new THREE.Vector3(4, 1, 4);
-    this.target = new THREE.Vector3(4, 1, 4);
+  constructor(engine, position) {
+    this.position = position;
+    this.target = position.clone();
     this.engine = engine;
+    this.health = 2;
     this.time = engine.timeManager;
     const textureShader = engine.renderManager.materialManager.addMaterial(
       "texture",
@@ -223,6 +224,10 @@ class Enemy {
     box.controller = this;
     this.box = box;
     this.speed = 2;
+  }
+
+  damage(total) {
+    this.health -= total;
   }
 
   update() {}
@@ -379,6 +384,7 @@ class Unit {
 
     if (lastAttackTime === null || gameTime - lastAttackTime >= period) {
       this.attackData.lastAttackTime = gameTime;
+      target.damage(1);
       console.log("Attack!");
     }
   }
@@ -432,8 +438,31 @@ class World {
       this.units.push(new Unit(engine, this.enemies));
     }
 
-    for (let j = 0; j < 1; j++) {
-      this.enemies.push(new Enemy(engine));
+    this.spawnEnemies();
+  }
+
+  cleanDeath() {
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const enemy = this.enemies[i];
+      if (enemy.health <= 0) {
+        this.engine.scene.remove(enemy.box);
+        this.enemies.splice(i, 1);
+      }
+    }
+  }
+
+  spawnEnemies() {
+    while (this.enemies.length < 2) {
+      this.enemies.push(
+        new Enemy(
+          engine,
+          new THREE.Vector3(
+            Math.randomRange(-10, 10),
+            1.1,
+            Math.randomRange(-10, 10)
+          )
+        )
+      );
     }
   }
 
@@ -441,6 +470,8 @@ class World {
     this.select.update();
     this.cameraController.update();
     this.units.forEach((u) => u.update());
+    this.cleanDeath();
+    this.spawnEnemies();
   }
 }
 
