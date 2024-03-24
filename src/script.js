@@ -261,7 +261,7 @@ class Unit {
       lastAttackTime: null,
     };
     this.box = box;
-    this.speed = 2;
+    this.speed = 6;
 
     const material = new THREE.LineBasicMaterial({
       color: 0x00f000,
