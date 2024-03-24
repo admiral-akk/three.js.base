@@ -201,10 +201,10 @@ class SelectUnits {
   }
 }
 
-class Unit {
+class Enemy {
   constructor(engine) {
-    this.position = new THREE.Vector3(0, 1, 0);
-    this.target = new THREE.Vector3(0, 1, 0);
+    this.position = new THREE.Vector3(4, 1, 4);
+    this.target = new THREE.Vector3(4, 1, 4);
     this.engine = engine;
     this.time = engine.timeManager;
     const textureShader = engine.renderManager.materialManager.addMaterial(
@@ -213,16 +213,48 @@ class Unit {
       basicTextureFragmentShader
     );
 
+    const box = new THREE.Mesh(new THREE.SphereGeometry(1), textureShader);
+    box.position.copy(this.position);
+    box.position.y = 1.1;
+    engine.scene.add(box);
+    box.castShadow = true;
+    box.receiveShadow = true;
+    box.material.shading = THREE.SmoothShading;
+    box.controller = this;
+    this.box = box;
+    this.speed = 2;
+  }
+
+  update() {}
+}
+
+class Unit {
+  constructor(engine, enemies) {
+    this.position = new THREE.Vector3(0, 1, 0);
+    this.target = new THREE.Vector3(0, 1, 0);
+    this.engine = engine;
+    this.enemies = enemies;
+    this.time = engine.timeManager;
+    const textureShader = engine.renderManager.materialManager.addMaterial(
+      "texture",
+      basicTextureVertexShader,
+      basicTextureFragmentShader
+    );
+
     const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1), textureShader);
-    box.position.x = 0;
-    box.position.y = Math.randomRange(1, 3);
-    box.position.z = 0;
+    box.position.copy(this.position);
+    box.position.y = 1.1;
     engine.scene.add(box);
     box.castShadow = true;
     box.receiveShadow = true;
     box.material.shading = THREE.SmoothShading;
     box.isUnit = true;
     box.controller = this;
+    this.attackData = {
+      range: 4,
+      period: 1,
+      lastAttackTime: null,
+    };
     this.box = box;
     this.speed = 2;
 
@@ -249,6 +281,25 @@ class Unit {
     this.targetCircle.scale.set(0.1, 0.1, 0.1);
     engine.scene.add(this.targetCircle);
     this.targetCircle.visible = false;
+
+    this.attackLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(),
+        new THREE.Vector3(),
+      ]),
+      new THREE.LineBasicMaterial({ color: "red" })
+    );
+    this.moveLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(),
+        new THREE.Vector3(),
+      ]),
+      new THREE.LineBasicMaterial({ color: "green" })
+    );
+    engine.scene.add(this.attackLine);
+    this.attackLine.visible = false;
+    engine.scene.add(this.moveLine);
+    this.attackLine.visible = false;
   }
 
   selected(isSelected) {
@@ -279,12 +330,64 @@ class Unit {
     this.targetCircle.position.copy(this.target);
     this.targetCircle.position.y = 0.04;
     this.targetCircle.visible = !this.target.equals(this.position);
+    this.moveLine.visible = this.targetCircle.visible;
+
+    this.moveLine.geometry.attributes.position.setXYZ(
+      0,
+      this.position.x,
+      this.position.y,
+      this.position.z
+    );
+
+    this.moveLine.geometry.attributes.position.setXYZ(
+      1,
+      this.target.x,
+      this.target.y,
+      this.target.z
+    );
+    this.moveLine.geometry.attributes.position.needsUpdate = true;
+  }
+
+  tryAttack() {
+    const { range, period, lastAttackTime } = this.attackData;
+    const { gameTime } = this.time.time;
+    let target = null;
+    for (let i = 0; i < this.enemies.length; i++) {
+      if (this.position.distanceTo(this.enemies[i].position) < range) {
+        target = this.enemies[i];
+      }
+    }
+    this.attackLine.visible = !!target;
+    if (!target) {
+      return;
+    }
+
+    this.attackLine.geometry.attributes.position.setXYZ(
+      0,
+      this.position.x,
+      this.position.y,
+      this.position.z
+    );
+
+    this.attackLine.geometry.attributes.position.setXYZ(
+      1,
+      target.position.x,
+      target.position.y,
+      target.position.z
+    );
+    this.attackLine.geometry.attributes.position.needsUpdate = true;
+
+    if (lastAttackTime === null || gameTime - lastAttackTime >= period) {
+      this.attackData.lastAttackTime = gameTime;
+      console.log("Attack!");
+    }
   }
 
   update() {
     this.updatePosition();
     this.updateBox();
     this.updateTargetCircle();
+    this.tryAttack();
   }
 }
 
@@ -323,9 +426,14 @@ class World {
     engine.scene.add(plane);
 
     this.units = [];
+    this.enemies = [];
     this.select = new SelectUnits(engine);
     for (let i = 0; i < 1; i++) {
-      this.units.push(new Unit(engine));
+      this.units.push(new Unit(engine, this.enemies));
+    }
+
+    for (let j = 0; j < 1; j++) {
+      this.enemies.push(new Enemy(engine));
     }
   }
 
