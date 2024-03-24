@@ -91,6 +91,96 @@ class RealTimeStrategyCamera {
   }
 }
 
+class SelectUnits {
+  constructor(engine) {
+    this.engine = engine;
+    this.input = engine.inputManager;
+    this.camera = engine.camera;
+    this.scene = engine.scene;
+    this.startClick = null;
+  }
+
+  update() {
+    const { mouseState } = this.input;
+    const { buttons, pos } = mouseState;
+    if (buttons === 1) {
+      if (!this.startClick) {
+        this.startClick = new THREE.Vector2();
+        this.startClick.copy(pos);
+      }
+    } else if (this.startClick) {
+      if (pos) {
+        // released, find units
+
+        const lowX = Math.min(pos.x, this.startClick.x);
+        const highX = Math.max(pos.x, this.startClick.x);
+        const lowY = Math.min(pos.y, this.startClick.y);
+        const highY = Math.max(pos.y, this.startClick.y);
+
+        // has to be infront of camera
+
+        const { fov, aspect } = this.camera;
+        const verticalAngle = (Math.PI * fov) / 360;
+        const horizontalAngle = verticalAngle * aspect;
+
+        const planeNormals = [
+          new THREE.Vector3(0, 0, 1),
+          new THREE.Vector3(-1, 0, -Math.tan(horizontalAngle * lowX)),
+          new THREE.Vector3(1, 0, Math.tan(horizontalAngle * highX)),
+          new THREE.Vector3(0, -1, -Math.tan(verticalAngle * lowY)),
+          new THREE.Vector3(0, 1, Math.tan(verticalAngle * highY)),
+        ].map((v) => v.applyQuaternion(this.camera.quaternion));
+
+        const hits = [];
+
+        this.scene.traverse((obj) => {
+          if (!obj.isUnit) {
+            return;
+          }
+          const delta = new THREE.Vector3();
+          delta.subVectors(obj.position, this.camera.position);
+          const matches = planeNormals.filter(
+            (norm) => norm.dot(delta) > 0
+          ).length;
+          if (matches === 0) {
+            hits.push(obj);
+          }
+        });
+
+        console.log(hits);
+      }
+      this.startClick = null;
+    }
+  }
+}
+
+class Unit {
+  constructor(engine) {
+    this.engine = engine;
+    const textureShader = engine.renderManager.materialManager.addMaterial(
+      "texture",
+      basicTextureVertexShader,
+      basicTextureFragmentShader
+    );
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1), textureShader);
+    box.position.x = Math.randomRange(-10, 10);
+    box.position.y = Math.randomRange(1, 3);
+    box.position.z = Math.randomRange(-10, 10);
+    engine.scene.add(box);
+    box.castShadow = true;
+    box.receiveShadow = true;
+    box.material.shading = THREE.SmoothShading;
+    box.isUnit = true;
+    this.box = box;
+  }
+
+  update() {
+    this.box.setRotationFromEuler(
+      new THREE.Euler(0, this.engine.timeManager.time.gameTime, 0)
+    );
+  }
+}
+
 class World {
   constructor(engine) {
     this.engine = engine;
@@ -124,33 +214,17 @@ class World {
 
     engine.scene.add(plane);
 
-    const textureShader = engine.renderManager.materialManager.addMaterial(
-      "texture",
-      basicTextureVertexShader,
-      basicTextureFragmentShader,
-      {
-        unique: true,
-      }
-    );
-
-    for (let i = 0; i < 40; i++) {
-      const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1), textureShader);
-      box.position.x = Math.randomRange(-10, 10);
-      box.position.y = Math.randomRange(1, 3);
-      box.position.z = Math.randomRange(-10, 10);
-      engine.scene.add(box);
-      box.castShadow = true;
-      box.receiveShadow = true;
-      box.material.shading = THREE.SmoothShading;
-      this.box = box;
+    this.units = [];
+    this.select = new SelectUnits(engine);
+    for (let i = 0; i < 1; i++) {
+      this.units.push(new Unit(engine));
     }
   }
 
   update() {
+    this.select.update();
     this.cameraController.update();
-    this.box.setRotationFromEuler(
-      new THREE.Euler(0, this.engine.timeManager.time.gameTime, 0)
-    );
+    this.units.forEach((u) => u.update());
   }
 }
 
