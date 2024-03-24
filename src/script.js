@@ -131,8 +131,8 @@ class SelectUnits {
 
       if (intersects.length) {
         this.selectedUnits.forEach((u) => {
-          u.controller.target.copy(intersects[0].point);
-          u.controller.target.y = 1;
+          u.target.copy(intersects[0].point);
+          u.target.y = 1;
         });
       }
     }
@@ -177,6 +177,7 @@ class SelectUnits {
           new THREE.Vector3(0, 1, Math.tan(verticalAngle * highY)),
         ].map((v) => v.applyQuaternion(this.camera.quaternion));
 
+        this.selectedUnits.forEach((u) => u.selected(false));
         this.selectedUnits = [];
 
         this.scene.traverse((obj) => {
@@ -189,9 +190,10 @@ class SelectUnits {
             (norm) => norm.dot(delta) > 0
           ).length;
           if (matches === 0) {
-            this.selectedUnits.push(obj);
+            this.selectedUnits.push(obj.controller);
           }
         });
+        this.selectedUnits.forEach((u) => u.selected(true));
       }
       this.startClick = null;
       this.engine.composer.removePass(this.selectPass);
@@ -210,6 +212,7 @@ class Unit {
       basicTextureVertexShader,
       basicTextureFragmentShader
     );
+
     const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1), textureShader);
     box.position.x = 0;
     box.position.y = Math.randomRange(1, 3);
@@ -222,6 +225,34 @@ class Unit {
     box.controller = this;
     this.box = box;
     this.speed = 2;
+
+    const material = new THREE.LineBasicMaterial({
+      color: 0x00f000,
+    });
+
+    const points = [];
+    const COUNT = 64;
+    for (let i = 0; i <= COUNT; i++) {
+      const angle = (2 * i * Math.PI) / COUNT;
+      points.push(new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle)));
+    }
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+    const line = new THREE.Line(geometry, material);
+    box.add(line);
+    this.selectionCircle = line;
+    line.visible = false;
+    line.position.y = -0.4;
+
+    this.targetCircle = new THREE.Line(geometry, material);
+    this.targetCircle.scale.set(0.1, 0.1, 0.1);
+    engine.scene.add(this.targetCircle);
+    this.targetCircle.visible = false;
+  }
+
+  selected(isSelected) {
+    this.selectionCircle.visible = isSelected;
   }
 
   updatePosition() {
@@ -244,9 +275,16 @@ class Unit {
     );
   }
 
+  updateTargetCircle() {
+    this.targetCircle.position.copy(this.target);
+    this.targetCircle.position.y = 0.04;
+    this.targetCircle.visible = !this.target.equals(this.position);
+  }
+
   update() {
     this.updatePosition();
     this.updateBox();
+    this.updateTargetCircle();
   }
 }
 
