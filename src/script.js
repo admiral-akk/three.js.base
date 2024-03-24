@@ -2,7 +2,10 @@ import "./style.css";
 import * as THREE from "three";
 import basicTextureVertexShader from "./shaders/basicTexture/vertex.glsl";
 import basicTextureFragmentShader from "./shaders/basicTexture/fragment.glsl";
+import unitSelectVertexShader from "./shaders/unitSelect/vertex.glsl";
+import unitSelectFragmentShader from "./shaders/unitSelect/fragment.glsl";
 import * as ENGINE from "./engine.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 
 /**
  * Core objects
@@ -98,6 +101,21 @@ class SelectUnits {
     this.camera = engine.camera;
     this.scene = engine.scene;
     this.startClick = null;
+
+    /**
+     * Loading overlay
+     */
+    const unitSelectionShader = {
+      uniforms: {
+        tDiffuse: { value: null },
+        uStartPos: { value: new THREE.Vector2() },
+        uEndPos: { value: new THREE.Vector2() },
+      },
+      vertexShader: unitSelectVertexShader,
+      fragmentShader: unitSelectFragmentShader,
+    };
+
+    this.selectPass = new ShaderPass(unitSelectionShader);
   }
 
   update() {
@@ -107,7 +125,20 @@ class SelectUnits {
       if (!this.startClick) {
         this.startClick = new THREE.Vector2();
         this.startClick.copy(pos);
+        this.engine.composer.addPass(this.selectPass);
       }
+      const offsetStart = new THREE.Vector2(
+        this.startClick.x,
+        this.startClick.y
+      )
+        .addScalar(1)
+        .multiplyScalar(0.5);
+
+      const offsetEnd = new THREE.Vector2(pos.x, pos.y)
+        .addScalar(1)
+        .multiplyScalar(0.5);
+      this.selectPass.material.uniforms.uStartPos.value = offsetStart;
+      this.selectPass.material.uniforms.uEndPos.value = offsetEnd;
     } else if (this.startClick) {
       if (pos) {
         // released, find units
@@ -150,6 +181,7 @@ class SelectUnits {
         console.log(hits);
       }
       this.startClick = null;
+      this.engine.composer.removePass(this.selectPass);
     }
   }
 }
@@ -163,9 +195,9 @@ class Unit {
       basicTextureFragmentShader
     );
     const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1), textureShader);
-    box.position.x = Math.randomRange(-10, 10);
+    box.position.x = 0;
     box.position.y = Math.randomRange(1, 3);
-    box.position.z = Math.randomRange(-10, 10);
+    box.position.z = 0;
     engine.scene.add(box);
     box.castShadow = true;
     box.receiveShadow = true;

@@ -14,6 +14,7 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import loadingVertexShader from "./shaders/loading/vertex.glsl";
 import loadingFragmentShader from "./shaders/loading/fragment.glsl";
+import { GammaCorrectionShader } from "three/examples/jsm/shaders/GammaCorrectionShader.js";
 import { gsap } from "gsap";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
@@ -345,13 +346,20 @@ class RenderManager {
     const scene = new THREE.Scene();
     const camera = generateCamera(cameraConfig);
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.outputEncoding = THREE.LinearEncoding;
 
     renderer.setClearColor("#201919");
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    const composer = new EffectComposer(renderer);
+    const composer = new EffectComposer(
+      renderer,
+
+      new THREE.WebGLRenderTarget(1, 1)
+    );
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
+    const gammaCorrectionPass = new ShaderPass(GammaCorrectionShader);
+    composer.addPass(gammaCorrectionPass);
     scene.add(camera);
 
     camera.updateZoom = () => {
@@ -873,7 +881,12 @@ class LoadingAnimationManager {
       });
       if (progressRatio == 1) {
         currAnimation.kill();
-        const timeline = gsap.timeline();
+        const timeline = gsap.timeline({
+          onComplete: () => {
+            engine.composer.removePass(loadingScreen);
+            console.log("removed");
+          },
+        });
         currAnimation = timeline.to(loadingUniforms.uMaxX, {
           duration: 0.2,
           value: progressRatio,
